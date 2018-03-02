@@ -1,0 +1,181 @@
+import java.util.*;
+/*
+This is the main TrashMap class with all the internal implementation.
+ */
+public class TrashMap<K,V> implements Map<K,V> {
+    /*
+    Internal classes for the implementation of the TrashMap
+     */
+    //This class represents the individual pieces of trash that will be stored inside a trashcan
+    protected class PieceOfTrash {
+        private K key;
+        private V value;
+
+        public PieceOfTrash(K key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public V getValue() {
+            return value;
+        }
+    }
+
+    //TrashCans will be the various "buckets" for each trash type
+    protected class TrashCan {
+        private Stack<PieceOfTrash> mainContents = new Stack<>();
+
+        public V dig(K key) {
+            V foundItem = null;
+
+            Stack<PieceOfTrash> lookingPile = new Stack<>();
+
+            boolean found = false;
+            while(!found) {
+                if(mainContents.peek().key.equals(key)) {
+                    //The item on top of the main contents is what we are looking for
+                    foundItem = mainContents.pop().getValue();
+                    found = true;
+                } else {
+                    //It's not, keep digging
+                    if(!mainContents.empty()) {
+                        lookingPile.push(mainContents.pop());
+                    } else {
+                        //Item is not found, we got to the bottom of the main pile without finding it
+                        return null;
+                    }
+                }
+            }
+            //Ok now that it has been found we need to put the contents of the other can back into the main contents
+            while(!lookingPile.empty()) {
+                mainContents.push(lookingPile.pop());
+            }
+            //Return the item we have found
+            return foundItem;
+
+        }
+
+        public void add(PieceOfTrash e) {
+            mainContents.push(e);
+        }
+
+        public boolean isEmpty() {
+            return mainContents.empty();
+        }
+    }
+
+    /*
+    Instance variables for each different trash bucket
+     */
+    private ArrayList<TrashCan> raccoonProofStorage = new ArrayList<>();
+
+    /*
+    Constructors
+     */
+    //This is just the basic constructor that creates a new TrashMap
+    public TrashMap () {
+        //Add all the trashcans (one for each trash type) to the raccoon proof storage
+        for(int i=0; i<Trashifier.TrashType.values().length; i++) {
+            this.raccoonProofStorage.add(new TrashCan());
+        }
+
+    }
+
+    //This constructor creates a new TrashMap with the contents of any other map
+    public TrashMap(Map<K,V> m) {
+        this();
+        //todo copying logic
+
+    }
+
+    /*
+    Map interface methods
+     */
+
+    @Override
+    public int size() {
+        return 0;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return false;
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        return false;
+    }
+
+    @Override
+    public V get(Object key) {
+        //We need to find out what bucket it's in, get its trashtype first
+        K typedKey = null;
+        try {
+            typedKey = (K)key;
+        } catch (ClassCastException e) {
+            throw new NoSuchElementException();
+        }
+        if(typedKey != null) {
+            //If we got here, we were able to cast the key to our actual key type so that's good
+            //Really crap variable naming but who cares really
+            Trashifier.TrashType keyType = Trashifier.trashType(typedKey);
+            TrashCan containingCan = this.raccoonProofStorage.get(keyType.ordinal());
+            //Dig for the item in the trashcan
+            V value = containingCan.dig(typedKey);
+            if(value == null) {
+                throw new NoSuchElementException();
+            }
+            return value;
+        }
+        //Should never happen
+        return null;
+    }
+
+    @Override
+    public V put(K key, V value) {
+        //We need to determine the TrashType of the key so we know which trashcan to put the piece of trash in
+        Trashifier.TrashType keyType = Trashifier.trashType(key);
+        System.out.printf("Storing %S (key %S) in trashcan %S%n", value, key, keyType);
+        PieceOfTrash item = new PieceOfTrash(key, value);
+        this.raccoonProofStorage.get(keyType.ordinal()).add(item);
+        //Don't really know why this returns anything, maybe in the future return what it's replacing??
+        //For now we just return the same thing we added to confirm it was added I guess
+        return value;
+    }
+
+    @Override
+    public V remove(Object key) {
+        return null;
+    }
+
+    @Override
+    public void putAll(Map<? extends K, ? extends V> m) {
+
+    }
+
+    @Override
+    public void clear() {
+
+    }
+
+    @Override
+    public Set<K> keySet() {
+        return null;
+    }
+
+    @Override
+    public Collection<V> values() {
+        return null;
+    }
+
+    @Override
+    public Set<Entry<K, V>> entrySet() {
+        return null;
+    }
+}
