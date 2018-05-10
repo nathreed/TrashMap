@@ -7,6 +7,7 @@ public class TrashMap<K,V> implements Map<K,V> {
     Internal classes for the implementation of the TrashMap
      */
     //This class represents the individual pieces of trash that will be stored inside a trashcan
+    //Analogous to an "entry"
     protected class PieceOfTrash {
         private K key;
         private V value;
@@ -55,12 +56,40 @@ public class TrashMap<K,V> implements Map<K,V> {
 
         }
 
+        public boolean contains(V value) {
+            Stack<PieceOfTrash> pile = new Stack<>();
+
+            boolean found = false;
+            while(!found) {
+                if(mainContents.peek().value.equals(value)) {
+                    found = true;
+                } else {
+                    if(!mainContents.empty()) {
+                        pile.push(mainContents.pop());
+                    } else {
+                        //not found and we hit the end of the stack
+                        break;
+                    }
+                }
+            }
+            //put everything back
+            while(!pile.empty()) {
+                mainContents.push(pile.pop());
+            }
+
+            return found;
+        }
+
         public void add(PieceOfTrash e) {
             mainContents.push(e);
         }
 
         public boolean isEmpty() {
             return mainContents.empty();
+        }
+
+        public int size() {
+            return mainContents.size();
         }
     }
 
@@ -84,32 +113,61 @@ public class TrashMap<K,V> implements Map<K,V> {
     //This constructor creates a new TrashMap with the contents of any other map
     public TrashMap(Map<K,V> m) {
         this();
-        //todo copying logic
+        for(K key: m.keySet()) {
+            this.put(key, m.get(key));
+        }
 
     }
 
     /*
     Map interface methods
      */
-
     @Override
     public int size() {
-        return 0;
+        int size = 0;
+        for(TrashCan trashCan: this.raccoonProofStorage) {
+            size += trashCan.size();
+        }
+        return size;
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return this.size() == 0;
     }
 
     @Override
     public boolean containsKey(Object key) {
-        return false;
+        //In order to see if it contains a key, we must first see which trashcan it would be in, then check that one
+        //Do this by getting the trashcode for the key
+
+        Trashifier.TrashType keyType = Trashifier.trashType(key);
+        TrashCan can = this.raccoonProofStorage.get(keyType.ordinal());
+        try {
+            V value = can.dig((K)key);
+            return value != null;
+        } catch (ClassCastException e) {
+            return false;
+        }
+
     }
 
     @Override
     public boolean containsValue(Object value) {
+        V typedValue = null;
+        try {
+            typedValue = (V)value;
+        } catch (ClassCastException e) {
+            return false; //value type does not match or cannot be casted to TrashMap value type, we can't do anything with it
+        }
+        //because I can't think of a better way to do this right now: just search all the storages to see if it contains the given value
+        for(TrashCan trashCan: this.raccoonProofStorage) {
+            if(trashCan.contains(typedValue)) {
+                return true;
+            }
+        }
         return false;
+
     }
 
     @Override
@@ -156,7 +214,9 @@ public class TrashMap<K,V> implements Map<K,V> {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-
+        for(K key: m.keySet()) {
+            this.put(key, m.get(key));
+        }
     }
 
     @Override
